@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Listing Grid</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .filter-bar {
+            padding: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            background-color: #f9f9f9;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .filter-bar label, .filter-bar select {
+            margin: 0;
+            font-weight: bold;
+        }
+        .filter-bar select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .product-card {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .product-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+        .product-image {
+            width: 200px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .product-name, .product-price {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .add-to-cart {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .add-to-cart:hover {
+            background: #0056b3;
+        }
+        .add-to-cart:focus {
+            outline: 3px solid #0056b3;
+        }
+        .cart-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+        }
+        .scroll-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: none;
+            font-size: 16px;
+        }
+        .scroll-to-top:hover {
+            background: #0056b3;
+        }
+        .scroll-to-top:focus {
+            outline: 3px solid #0056b3;
+        }
+        @media (max-width: 768px) {
+            .filter-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let allProducts = [];
+
+            fetch('https://fakestoreapi.com/products')
+                .then(res => res.json())
+                .then(products => {
+                    allProducts = products;
+                    displayProducts(products);
+                });
+
+            function displayProducts(products) {
+                const grid = document.querySelector('.product-grid');
+                grid.innerHTML = '';
+                products.forEach(product => {
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+                    card.setAttribute('aria-labelledby', `product-name-${product.id}`);
+                    card.setAttribute('aria-describedby', `product-description-${product.id}`);
+                    card.innerHTML = `
+                        <img src="${product.image}" alt="Image of ${product.title}" class="product-image loaded" id="product-image-${product.id}">
+                        <div class="product-name" id="product-name-${product.id}" role="heading" aria-level="3">${product.title}</div>
+                        <div class="product-price" id="product-price-${product.id}">$${product.price}</div>
+                        <button class="add-to-cart" data-product="${product.id}" aria-label="Add ${product.title} to cart">Add to Cart</button>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+
+            document.getElementById('category').addEventListener('change', filterProducts);
+            document.getElementById('price-range').addEventListener('change', filterProducts);
+
+            function filterProducts() {
+                const category = document.getElementById('category').value;
+                const priceRange = document.getElementById('price-range').value;
+
+                let filteredProducts = allProducts;
+
+                if (category !== 'all') {
+                    filteredProducts = filteredProducts.filter(p => p.category.toLowerCase() === category.toLowerCase());
+                }
+
+                if (priceRange === 'low') {
+                    filteredProducts = filteredProducts.filter(p => p.price <= 50);
+                } else if (priceRange === 'mid') {
+                    filteredProducts = filteredProducts.filter(p => p.price > 50 && p.price <= 100);
+                } else if (priceRange === 'high') {
+                    filteredProducts = filteredProducts.filter(p => p.price > 100);
+                }
+
+                displayProducts(filteredProducts);
+            }
+
+            const scrollToTopBtn = document.querySelector('.scroll-to-top');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 200 && window.scrollY + window.innerHeight < document.body.scrollHeight - 20) {
+                    scrollToTopBtn.style.display = 'block';
+                } else {
+                    scrollToTopBtn.style.display = 'none';
+                }
+            });
+
+            scrollToTopBtn.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            // Cart notification logic
+            const cartNotification = document.createElement('div');
+            cartNotification.classList.add('cart-notification');
+            cartNotification.innerHTML = 'Item added to cart!';
+            document.body.appendChild(cartNotification);
+
+            document.body.addEventListener('click', function(event) {
+                if (event.target.classList.contains('add-to-cart')) {
+                    cartNotification.style.display = 'block';
+                    setTimeout(() => {
+                        cartNotification.style.display = 'none';
+                    }, 2000);
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1 style="text-align: center;">Product Listing</h1>
+    <div class="filter-bar" role="form" aria-labelledby="filter-form">
+        <h2 id="filter-form" class="sr-only">Filter products</h2>
+        <label for="category">Category:</label>
+        <select id="category" aria-label="Filter products by category">
+            <option value="all">All</option>
+            <option value="electronics">Electronics</option>
+            <option value="jewelery">Jewelry</option>
+            <option value="men's clothing">Men's Clothing</option>
+            <option value="women's clothing">Women's Clothing</option>
+        </select>
+
+        <label for="price-range">Price Range:</label>
+        <select id="price-range" aria-label="Filter products by price range">
+            <option value="all">All</option>
+            <option value="low">$0 - $50</option>
+            <option value="mid">$50 - $100</option>
+            <option value="high">$100+</option>
+        </select>
+    </div>
+
+    <button class="scroll-to-top" aria-label="Scroll to top">⬆ Scroll to Top</button>
+
+    <div class="product-grid" role="grid" aria-labelledby="product-list"></div>
+</body>
+</html>
